@@ -404,6 +404,10 @@ class Application(Tk, Sender):
         self.bind("<<ToolCalibrate>>", frame.calibrate)
         self.bind("<<ToolChange>>", frame.change)
 
+        self.bind('<<ProbeTLO>>', frame.updateTLO)
+        self.bind('<<StateTLO>>', self.gstate.updateTLO)
+        self.bind('<<ProbeTool>>', frame.updateToolHeight)
+
         self.bind("<<AutolevelMargins>>", self.autolevel.getMargins)
         self.bind("<<AutolevelZero>>", self.autolevel.setZero)
         self.bind("<<AutolevelClear>>", self.autolevel.clear)
