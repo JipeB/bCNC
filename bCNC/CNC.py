@@ -1836,18 +1836,15 @@ class CNC:
 
         # create the necessary code
         lines = []
-        # remember state and populate variables,
-        # FIXME: move to ./controllers/_GenericController.py
-        lines.append(
-            "$g"
-        )
         lines.append("m5")  # stop spindle
         lines.append("%wait")
         lines.append("%_x,_y,_z = wx,wy,wz")  # remember position
+        lines.append("g49")                   # cancel TLO
         lines.append("g53 g0 z[toolchangez]")
         lines.append("g53 g0 x[toolchangex] y[toolchangey]")
         lines.append("%wait")
-
+        lines.append("m0")                    # feed hold
+        
         if CNC.comment:
             lines.append(
                 f"%msg Tool change T{int(self.tool):02} ({CNC.comment})")
@@ -1857,40 +1854,21 @@ class CNC:
 
         if CNC.toolPolicy < 4:
             lines.append("g53 g0 x[toolprobex] y[toolprobey]")
-            lines.append("g53 g0 z[toolprobez]")
-
-            # fixed WCS
-            if CNC.vars["fastprbfeed"]:
-                prb_reverse = {"2": "4", "3": "5", "4": "2", "5": "3"}
-                CNC.vars["prbcmdreverse"] = (
-                    CNC.vars["prbcmd"][:-1]
-                    + prb_reverse[CNC.vars["prbcmd"][-1]]
-                )
-                currentFeedrate = CNC.vars["fastprbfeed"]
-                while currentFeedrate > CNC.vars["prbfeed"]:
-                    lines.append("%wait")
-                    lines.append(
-                        f"g91 [prbcmd] {CNC.fmt('f', currentFeedrate)} "
-                        f"z[toolprobez-mz-tooldistance]"
-                    )
-                    lines.append("%wait")
-                    lines.append(
-                        f"[prbcmdreverse] {CNC.fmt('f', currentFeedrate)} "
-                        f"z[toolprobez-mz]"
-                    )
-                    currentFeedrate /= 10
-            lines.append("%wait")
-            lines.append(
-                "g91 [prbcmd] f[prbfeed] z[toolprobez-mz-tooldistance]")
-
-            if CNC.toolPolicy == 2:
+            lines.append("g53 g0 z[toolprobez]") # fast approch
+            lines.append("g91")                                      # change mode
+            lines.append("[prbcmd] z-[tooldistance] f[fastprbfeed]") # switch search
+            lines.append("g0 z[1]")                                  # switch clearence
+            lines.append("[prbcmd] z-[2] f[prbfeed]")                # measure
+            lines.append("g90")                                      # restore mode
+ 
+            if CNC.toolPolicy == 2:  # Tool change WCS
                 # Adjust the current WCS to fit to the tool
                 # FIXME could be done dynamically in the code
                 p = WCS.index(CNC.vars["WCS"]) + 1
                 lines.append(f"g10l20p{int(p)} z[toolheight]")
                 lines.append("%wait")
 
-            elif CNC.toolPolicy == 3:
+            elif CNC.toolPolicy == 3:  # Tool change TLO
                 # Modify the tool length, update the TLO
                 lines.append("g4 p1")  # wait a sec to get the probe info
                 lines.append("%wait")
@@ -1905,7 +1883,13 @@ class CNC:
             lines.append("%wait")
             lines.append("%msg Restart spindle")
             lines.append("m0")  # feed hold
-
+            
+        # tool in action    
+        if CNC.comment:
+            ines.append("%%msg T%02d (%s)" %(self.tool,CNC.comment))
+         else:
+            lines.append("%%msg T%02d" %(self.tool))
+            
         # restore state
         lines.append("g90")  # restore mode
         lines.append("g0 x[_x] y[_y]")  # ... x,y position
