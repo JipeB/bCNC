@@ -2790,16 +2790,18 @@ class Application(Tk, Sender):
         # Update probe and draw point
         if self._probeUpdate:
             Page.frames["Probe:Probe"].updateProbe()
-            Page.frames["ProbeCommon"].updateTlo()
+            Page.frames["ProbeCommon"].updateSensor()
+            Page.frames["State"].updateTLO()
             self.canvas.drawProbe()
             self._probeUpdate = False
 
         # Update any possible variable?
         if self._update:
             if self._update == "toolheight":
-                Page.frames["Probe:Tool"].updateTool()
+                Page.frames["Probe:Tool"].updateToolHeight()
             elif self._update == "TLO":
-                Page.frames["ProbeCommon"].updateTlo()
+                Page.frames["ProbeCommon"].updateTLO()
+                Page.frames["State"].updateTLO()
             self._update = None
 
         if self.running:
